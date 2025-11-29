@@ -107,6 +107,32 @@
             vertical-align: middle;
             margin-right: 0.5rem;
         }
+
+        /* 批量操作按钮禁用状态样式 */
+        #bulkCopyBtn:disabled,
+        #bulkDeleteBtn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* 表格复选框样式 */
+        .account-checkbox {
+            cursor: pointer;
+        }
+
+        #selectAllCheckbox {
+            cursor: pointer;
+        }
+
+        /* 表格操作按钮组样式 */
+        table td {
+            vertical-align: middle;
+        }
+
+        /* 操作列按钮间距优化 */
+        .btn-secondary, .btn-danger {
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -144,7 +170,9 @@
             <div class="card">
                 <div class="card-header-with-actions">
                     <h2>账号列表</h2>
-                    <div style="display: flex; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button id="bulkCopyBtn" class="btn-secondary" disabled>批量复制</button>
+                        <button id="bulkDeleteBtn" class="btn-danger" disabled>批量删除</button>
                         <button id="bulkAddAccountBtn" class="btn-secondary">批量添加</button>
                         <button id="addAccountBtn" class="btn-primary">添加账号</button>
                     </div>
@@ -153,16 +181,17 @@
                     <table id="accountsTable">
                         <thead>
                             <tr>
-                                <th>索引</th>
-                                <th>名称</th>
+                                <th style="width: 50px; text-align: center;"><input type="checkbox" id="selectAllCheckbox" title="全选"></th>
+                                <th style="width: 80px;">索引</th>
+                                <th style="width: 150px;">名称</th>
                                 <th>CONFIG_ID</th>
-                                <th>状态</th>
-                                <th style="width: 250px;">操作</th>
+                                <th style="width: 100px; text-align: center;">状态</th>
+                                <th style="width: 320px;">操作</th>
                             </tr>
                         </thead>
                         <tbody id="accountsTableBody">
                             <tr>
-                                <td colspan="5" class="loading">加载中...</td>
+                                <td colspan="6" class="loading">加载中...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -262,9 +291,18 @@
             if (!btn) return;
 
             const index = parseInt(btn.getAttribute('data-index'));
-            if (isNaN(index)) return;
+            if (isNaN(index)) {
+                console.warn('无法获取账号索引:', btn);
+                return;
+            }
 
-            if (btn.classList.contains('test-btn')) {
+            console.log('按钮点击:', btn.className, '索引:', index);
+
+            if (btn.classList.contains('copy-btn')) {
+                e.preventDefault();
+                e.stopPropagation();
+                copyAccountConfig(index);
+            } else if (btn.classList.contains('test-btn')) {
                 testAccount(index);
             } else if (btn.classList.contains('edit-btn')) {
                 editAccount(index);
@@ -297,15 +335,16 @@
             } catch (error) {
                 console.error('加载账号失败:', error);
                 document.getElementById('accountsTableBody').innerHTML = 
-                    '<tr><td colspan="5" class="loading">加载失败，请刷新重试</td></tr>';
+                    '<tr><td colspan="6" class="loading">加载失败，请刷新重试</td></tr>';
             }
         }
 
         // 渲染账号列表
         function renderAccounts() {
             const tbody = document.getElementById('accountsTableBody');
-            if (accounts.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="loading">暂无账号，请添加</td></tr>';
+                if (accounts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="loading">暂无账号，请添加</td></tr>';
+                updateBulkButtons();
                 return;
             }
 
@@ -317,20 +356,35 @@
 
                 return `
                     <tr>
+                        <td style="text-align: center;">
+                            ${acc.index > 0 ? `<input type="checkbox" class="account-checkbox" data-index="${acc.index}">` : ''}
+                        </td>
                         <td>${acc.index === 0 ? '默认' : acc.index}</td>
                         <td>${acc.name}</td>
                         <td style="font-family: monospace; font-size: 0.875rem;">${acc.config_id.substring(0, 30)}...</td>
                         <td><span class="status-badge ${statusClass}">${statusText}</span></td>
-                        <td>
-                            <button class="btn-secondary test-btn" data-index="${acc.index}" style="margin-right: 0.5rem;">测试</button>
-                            <button class="btn-secondary edit-btn" data-index="${acc.index}" style="margin-right: 0.5rem;">编辑</button>
-                            ${acc.index > 0 ? `<button class="btn-danger delete-btn" data-index="${acc.index}">删除</button>` : ''}
+                        <td style="white-space: nowrap;">
+                            <button class="btn-secondary copy-btn" data-index="${acc.index}" style="margin-right: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;" title="复制配置">复制</button>
+                            <button class="btn-secondary test-btn" data-index="${acc.index}" style="margin-right: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;">测试</button>
+                            <button class="btn-secondary edit-btn" data-index="${acc.index}" style="margin-right: 0.5rem; padding: 0.5rem 0.75rem; font-size: 0.875rem;">编辑</button>
+                            ${acc.index > 0 ? `<button class="btn-danger delete-btn" data-index="${acc.index}" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">删除</button>` : ''}
                         </td>
                     </tr>
                 `;
             }).join('');
 
-            // 事件委托已经在 tbody 上绑定，无需重复绑定
+            // 更新批量操作按钮状态
+            updateBulkButtons();
+            
+            // 更新批量操作按钮状态
+            updateBulkButtons();
+            
+            // 重置全选复选框
+            const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            }
         }
 
         // 添加账号
@@ -582,6 +636,221 @@
             bulkAccountModal.addEventListener('click', (e) => {
                 if (e.target.id === 'bulkAccountModal') {
                     closeBulkAccountModal();
+                }
+            });
+        }
+
+        // 复制账号配置
+        function copyAccountConfig(index) {
+            console.log('复制账号配置，索引:', index);
+            const account = accounts.find(acc => acc.index === index);
+            if (!account) {
+                console.error('未找到账号，索引:', index);
+                alert('未找到账号信息');
+                return;
+            }
+            
+            console.log('账号信息:', account);
+            
+            // 生成配置文本（.env格式）
+            const configText = `# Account ${account.index}: ${account.name}@${account.index}
+ACCOUNT${account.index}_NAME="${account.name}"
+ACCOUNT${account.index}_SECURE_C_SES="${account.secure_c_ses || ''}"
+ACCOUNT${account.index}_CSESIDX="${account.csesidx || ''}"
+ACCOUNT${account.index}_CONFIG_ID="${account.config_id || ''}"
+${account.host_c_oses ? `ACCOUNT${account.index}_HOST_C_OSES="${account.host_c_oses}"` : ''}`;
+            
+            console.log('生成的配置文本:', configText);
+            
+            // 复制到剪贴板
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(configText).then(() => {
+                    alert('账号配置已复制到剪贴板');
+                }).catch(err => {
+                    console.error('Clipboard API 失败:', err);
+                    // 如果clipboard API失败，使用传统方法
+                    fallbackCopyTextToClipboard(configText);
+                });
+            } else {
+                // 浏览器不支持 Clipboard API，使用传统方法
+                fallbackCopyTextToClipboard(configText);
+            }
+        }
+        
+        // 批量复制账号配置
+        function bulkCopyAccountConfigs() {
+            const checkboxes = document.querySelectorAll('.account-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('请选择要复制的账号');
+                return;
+            }
+            
+            const indices = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-index')));
+            const configTexts = [];
+            
+            for (const index of indices) {
+                const account = accounts.find(acc => acc.index === index);
+                if (!account) continue;
+                
+                // 生成单个账号配置文本
+                const configText = `# Account ${account.index}: ${account.name}@${account.index}
+ACCOUNT${account.index}_NAME="${account.name}"
+ACCOUNT${account.index}_SECURE_C_SES="${account.secure_c_ses || ''}"
+ACCOUNT${account.index}_CSESIDX="${account.csesidx || ''}"
+ACCOUNT${account.index}_CONFIG_ID="${account.config_id || ''}"
+${account.host_c_oses ? `ACCOUNT${account.index}_HOST_C_OSES="${account.host_c_oses}"` : ''}`;
+                
+                configTexts.push(configText);
+            }
+            
+            // 合并所有配置，用空行分隔
+            const combinedText = configTexts.join('\n\n');
+            
+            console.log('批量复制配置文本:', combinedText);
+            
+            // 复制到剪贴板
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(combinedText).then(() => {
+                    alert(`已复制 ${indices.length} 个账号配置到剪贴板`);
+                }).catch(err => {
+                    console.error('Clipboard API 失败:', err);
+                    fallbackCopyTextToClipboard(combinedText, indices.length);
+                });
+            } else {
+                fallbackCopyTextToClipboard(combinedText, indices.length);
+            }
+        }
+        
+        // 备用复制方法
+        function fallbackCopyTextToClipboard(text, count = 1) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-999999px';
+            textarea.style.top = '-999999px';
+            document.body.appendChild(textarea);
+            textarea.focus();
+            textarea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    if (count > 1) {
+                        alert(`已复制 ${count} 个账号配置到剪贴板`);
+                    } else {
+                        alert('账号配置已复制到剪贴板');
+                    }
+                } else {
+                    alert('复制失败，请手动复制');
+                }
+            } catch (err) {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制');
+            }
+            document.body.removeChild(textarea);
+        }
+
+        // 更新批量操作按钮的启用/禁用状态
+        function updateBulkButtons() {
+            const checkboxes = document.querySelectorAll('.account-checkbox:checked');
+            const checkedCount = checkboxes.length;
+            
+            const bulkCopyBtn = document.getElementById('bulkCopyBtn');
+            const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+            
+            if (bulkCopyBtn) {
+                bulkCopyBtn.disabled = checkedCount === 0;
+            }
+            if (bulkDeleteBtn) {
+                bulkDeleteBtn.disabled = checkedCount === 0;
+            }
+        }
+
+        // 全选/取消全选
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        if (selectAllCheckbox) {
+            selectAllCheckbox.addEventListener('change', (e) => {
+                const checkboxes = document.querySelectorAll('.account-checkbox');
+                checkboxes.forEach(cb => {
+                    cb.checked = e.target.checked;
+                });
+                updateBulkButtons();
+            });
+        }
+
+        // 批量复制账号
+        const bulkCopyBtn = document.getElementById('bulkCopyBtn');
+        if (bulkCopyBtn) {
+            bulkCopyBtn.addEventListener('click', () => {
+                bulkCopyAccountConfigs();
+            });
+        }
+
+        // 监听单个复选框的变化
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('account-checkbox')) {
+                updateBulkButtons();
+                // 更新全选复选框状态
+                const checkboxes = document.querySelectorAll('.account-checkbox');
+                const checkedCount = document.querySelectorAll('.account-checkbox:checked').length;
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+                    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+                }
+            }
+        });
+
+        // 批量删除账号
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        if (bulkDeleteBtn) {
+            bulkDeleteBtn.addEventListener('click', async () => {
+                const checkboxes = document.querySelectorAll('.account-checkbox:checked');
+                if (checkboxes.length === 0) {
+                    alert('请选择要删除的账号');
+                    return;
+                }
+                
+                const indices = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-index')));
+                const accountNames = indices.map(idx => {
+                    const acc = accounts.find(a => a.index === idx);
+                    return acc ? acc.name : `索引${idx}`;
+                }).join('、');
+                
+                if (!confirm(`确定要删除以下 ${indices.length} 个账号吗？\n${accountNames}\n\n此操作不可恢复。`)) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/admin/accounts/bulk-delete', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ indices })
+                    });
+                    
+                    if (response.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/static/index.html';
+                        return;
+                    }
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.detail || '批量删除失败');
+                    }
+                    
+                    const result = await response.json();
+                    alert(`成功删除 ${result.deleted_count} 个账号\n\n配置已自动重新加载，无需重启服务。`);
+                    
+                    // 取消全选
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.checked = false;
+                    }
+                    
+                    loadAccounts();
+                } catch (error) {
+                    alert('批量删除失败: ' + error.message);
                 }
             });
         }

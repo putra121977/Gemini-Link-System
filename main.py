@@ -1893,6 +1893,88 @@ async def delete_account(
     return {"message": "账号已删除"}
 
 
+class BulkDeleteAccountRequest(BaseModel):
+    """批量删除账号请求"""
+    indices: List[int]  # 要删除的账号索引列表
+
+
+@app.post("/admin/accounts/bulk-delete")
+async def bulk_delete_accounts(
+    req: BulkDeleteAccountRequest,
+    admin: Admin = Depends(get_current_admin)
+):
+    """批量删除账号"""
+    if not req.indices:
+        raise HTTPException(status_code=400, detail="请选择要删除的账号")
+    
+    lines = read_env_file()
+    accounts = parse_accounts_from_env_lines(lines)
+    
+    # 验证要删除的账号是否存在
+    existing_indices = {acc["index"] for acc in accounts}
+    invalid_indices = [idx for idx in req.indices if idx not in existing_indices]
+    if invalid_indices:
+        raise HTTPException(status_code=404, detail=f"以下账号不存在: {invalid_indices}")
+    
+    # 不允许删除默认账号（index=0）
+    if 0 in req.indices:
+        raise HTTPException(status_code=400, detail="不能删除默认账号")
+    
+    # 按索引从大到小排序，从后往前删除，避免索引变化影响
+    sorted_indices = sorted(req.indices, reverse=True)
+    
+    deleted_count = 0
+    for account_index in sorted_indices:
+        # 删除账号配置
+        new_lines = []
+        i = 0
+        in_account_section = False
+        account_start = -1
+        account_end = -1
+        
+        while i < len(lines):
+            line = lines[i]["raw"]
+            
+            # 检查是否进入目标账号区域
+            if f"ACCOUNT{account_index}_" in line:
+                if not in_account_section:
+                    in_account_section = True
+                    account_start = i
+                    # 检查前面是否有注释
+                    if account_start > 0 and lines[account_start - 1]["raw"].strip().startswith("#"):
+                        account_start -= 1
+            elif in_account_section:
+                # 检查是否离开账号区域（遇到空行或下一个账号）
+                if not line.strip() or (line.strip().startswith("#") and "Account" in line and f"Account {account_index}" not in line):
+                    account_end = i
+                    break
+                # 检查是否是下一个账号的配置
+                if "ACCOUNT" in line and f"ACCOUNT{account_index}_" not in line:
+                    account_end = i
+                    break
+            
+            i += 1
+        
+        # 如果找到了账号区域，删除它
+        if account_start >= 0:
+            if account_end == -1:
+                account_end = len(lines)
+            new_lines = lines[:account_start] + lines[account_end:]
+            lines = new_lines
+            deleted_count += 1
+    
+    if deleted_count > 0:
+        write_env_file(lines)
+        # 动态重新加载账号配置
+        reload_accounts_from_env_file()
+        logger.info(f"✅ 管理员 {admin.username} 批量删除了 {deleted_count} 个账号 (索引: {req.indices})")
+    
+    return {
+        "message": f"成功删除 {deleted_count} 个账号",
+        "deleted_count": deleted_count
+    }
+
+
 @app.post("/admin/accounts/{account_index}/test")
 async def test_account(
     account_index: int,
